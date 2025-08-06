@@ -19,16 +19,52 @@ from openai_responses.exceptions import APIError, AuthenticationError
 
 
 def setup_page():
-    """Configure the Streamlit page."""
+    """Setup the Streamlit page configuration."""
     st.set_page_config(
-        page_title="OpenAI Responses API",
-        page_icon="🚀",
+        page_title="OpenAI Responses API Interface",
+        page_icon="🤖",
         layout="wide",
         initial_sidebar_state="expanded"
     )
     
-    st.title("🚀 OpenAI Responses API")
-    st.markdown("Generate structured responses with customizable parameters and tool calling")
+    # Add custom CSS for better markdown rendering
+    st.markdown("""
+    <style>
+    .markdown-content {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid #007bff;
+        margin: 1rem 0;
+    }
+    .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+        color: #2c3e50;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .markdown-content ul, .markdown-content ol {
+        margin-left: 1.5rem;
+    }
+    .markdown-content li {
+        margin-bottom: 0.25rem;
+    }
+    .markdown-content blockquote {
+        border-left: 4px solid #6c757d;
+        padding-left: 1rem;
+        margin: 1rem 0;
+        color: #6c757d;
+    }
+    .markdown-content code {
+        background-color: #e9ecef;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        font-family: 'Courier New', monospace;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    st.title("🤖 OpenAI Responses API Interface")
+    st.markdown("Generate structured responses using OpenAI's Responses API with support for tools and custom formatting.")
 
 
 def create_sidebar():
@@ -289,21 +325,21 @@ def create_response_format_section():
         response_type = st.selectbox(
             "Response Type",
             ["email", "letter", "message", "response", "reply", "note"],
-            index=0,
+            index=3,  # "response" is at index 3
             help="Type of response to generate."
         )
         
         style = st.selectbox(
             "Style",
             ["professional", "casual", "formal", "friendly", "business"],
-            index=0,
+            index=1,  # "casual" is at index 1
             help="Writing style for the response."
         )
         
         length = st.selectbox(
             "Length",
             ["short", "medium", "long"],
-            index=1,
+            index=0,  # "short" is at index 0
             help="Desired length of the response."
         )
     
@@ -311,7 +347,7 @@ def create_response_format_section():
         tone = st.selectbox(
             "Tone",
             ["friendly", "polite", "assertive", "neutral", "enthusiastic", "sympathetic", "professional"],
-            index=1,
+            index=3,  # "neutral" is at index 3
             help="Tone of the response."
         )
         
@@ -430,13 +466,29 @@ def display_response(response, error: Optional[str] = None):
     if response:
         # Display the response content
         st.subheader("Content")
-        st.text_area(
-            "Generated Response",
-            value=response.content,
-            height=300,
-            disabled=True,
-            key="response_content"
-        )
+        
+        # Add toggle for raw text view
+        show_raw = st.checkbox("Show Raw Text", help="Toggle to see the raw markdown text instead of rendered content")
+        
+        # Use markdown to render the content properly
+        if response.content:
+            if show_raw:
+                st.text_area(
+                    "Raw Response Text",
+                    value=response.content,
+                    height=300,
+                    disabled=True,
+                    key="response_content_raw"
+                )
+            else:
+                # Render markdown with custom styling
+                st.markdown(f"""
+                <div class="markdown-content">
+                {response.content}
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("No content generated.")
         
         # Display tool calls if any
         if response.tool_calls:

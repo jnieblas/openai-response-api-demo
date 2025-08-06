@@ -221,6 +221,8 @@ streamlit run app.py
 - **Quick Templates**: Pre-built templates for common use cases
 - **Real-time Response Generation**: See results immediately
 - **Tool Call Visualization**: View and inspect tool calls made by the model
+- **Markdown Rendering**: Beautiful, formatted responses with proper styling
+- **Raw Text Toggle**: Switch between rendered and raw text views
 
 ## 📚 Examples
 
