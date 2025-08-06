@@ -30,31 +30,44 @@ def setup_page():
     # Add custom CSS for better markdown rendering
     st.markdown("""
     <style>
-    .markdown-content {
+    /* Style only the response content markdown */
+    .response-markdown {
         background-color: #f8f9fa;
         padding: 1rem;
         border-radius: 0.5rem;
         border-left: 4px solid #007bff;
         margin: 1rem 0;
     }
-    .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+    
+    /* Style headings in response content */
+    .response-markdown h1, 
+    .response-markdown h2, 
+    .response-markdown h3 {
         color: #2c3e50;
         margin-top: 1.5rem;
         margin-bottom: 0.5rem;
     }
-    .markdown-content ul, .markdown-content ol {
+    
+    /* Style lists in response content */
+    .response-markdown ul, 
+    .response-markdown ol {
         margin-left: 1.5rem;
     }
-    .markdown-content li {
+    
+    .response-markdown li {
         margin-bottom: 0.25rem;
     }
-    .markdown-content blockquote {
+    
+    /* Style blockquotes in response content */
+    .response-markdown blockquote {
         border-left: 4px solid #6c757d;
         padding-left: 1rem;
         margin: 1rem 0;
         color: #6c757d;
     }
-    .markdown-content code {
+    
+    /* Style code in response content */
+    .response-markdown code {
         background-color: #e9ecef;
         padding: 0.2rem 0.4rem;
         border-radius: 0.25rem;
@@ -467,8 +480,19 @@ def display_response(response, error: Optional[str] = None):
         # Display the response content
         st.subheader("Content")
         
-        # Add toggle for raw text view
-        show_raw = st.checkbox("Show Raw Text", help="Toggle to see the raw markdown text instead of rendered content")
+        # Add toggle for raw text view with proper key
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            show_raw = st.checkbox(
+                "Show Raw Text", 
+                key="show_raw_text_checkbox",
+                help="Toggle to see the raw markdown text instead of rendered content"
+            )
+        with col2:
+            if show_raw:
+                st.info("📄 Showing raw markdown text")
+            else:
+                st.info("🎨 Showing rendered markdown")
         
         # Use markdown to render the content properly
         if response.content:
@@ -483,7 +507,7 @@ def display_response(response, error: Optional[str] = None):
             else:
                 # Render markdown with custom styling
                 st.markdown(f"""
-                <div class="markdown-content">
+                <div class="response-markdown">
                 {response.content}
                 </div>
                 """, unsafe_allow_html=True)
@@ -534,6 +558,10 @@ def main():
         st.session_state.prompt = ""
     if "response_format" not in st.session_state:
         st.session_state.response_format = {}
+    if "last_response" not in st.session_state:
+        st.session_state.last_response = None
+    if "last_error" not in st.session_state:
+        st.session_state.last_error = None
     
     # Create sidebar
     config = create_sidebar()
@@ -570,7 +598,12 @@ def main():
                         tools=tools,
                         tool_choice=tool_choice
                     )
-                    display_response(response, error)
+                    st.session_state.last_response = response
+                    st.session_state.last_error = error
+    
+    # Always display the last response if it exists
+    if st.session_state.last_response or st.session_state.last_error:
+        display_response(st.session_state.last_response, st.session_state.last_error)
     
     with col2:
         # Display current configuration
