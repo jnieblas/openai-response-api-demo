@@ -24,7 +24,7 @@ setup(
     description="Python interface for OpenAI Responses API",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/openai-responses-demo",
+    url="https://github.com/jnieblas/openai-response-api-demo",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[
