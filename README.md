@@ -9,6 +9,7 @@ A Python interface for the OpenAI Responses API, providing a clean and type-safe
 - 🔧 Configurable response formats and parameters
 - 🛡️ Error handling and validation
 - 📝 Comprehensive examples and documentation
+- 🌐 **NEW: Interactive web interface with Streamlit**
 
 ## Requirements
 
@@ -40,6 +41,22 @@ pip install -r requirements.txt
 
 ## Quick Start
 
+### Option 1: Web Interface (Recommended)
+
+1. Set your OpenAI API key:
+```bash
+export OPENAI_API_KEY="your-api-key-here"
+```
+
+2. Launch the web interface:
+```bash
+python run_app.py
+```
+
+3. Open your browser and go to `http://localhost:8501`
+
+### Option 2: Command Line Demo
+
 1. Set your OpenAI API key:
 ```bash
 export OPENAI_API_KEY="your-api-key-here"
@@ -50,7 +67,36 @@ export OPENAI_API_KEY="your-api-key-here"
 python main.py
 ```
 
+## Web Interface Features
+
+The Streamlit web interface provides:
+
+- 🎯 **Quick Templates** - Pre-configured templates for common use cases
+- ⚙️ **Interactive Configuration** - Adjust model, temperature, and other parameters
+- 📝 **Custom Prompts** - Enter your own prompts with real-time formatting
+- 📊 **Response Analytics** - View token usage and response metadata
+- 🔑 **Secure API Key Input** - Enter your API key securely in the interface
+
+### Quick Templates Available:
+
+- 📧 Professional Email
+- 📝 Formal Letter  
+- 💬 Casual Message
+- 🙏 Thank You Note
+- 📋 Meeting Confirmation
+- 🎉 Creative Story
+
 ## Usage
+
+### Web Interface
+
+1. Launch the app: `python run_app.py`
+2. Enter your API key (or set it as environment variable)
+3. Choose a quick template or create a custom prompt
+4. Adjust response format settings
+5. Click "Generate Response"
+
+### Python API
 
 ```python
 from openai_responses import OpenAIResponsesAPI
@@ -81,7 +127,9 @@ openai-responses-demo/
 │       ├── client.py
 │       ├── models.py
 │       └── exceptions.py
-├── main.py
+├── app.py                 # Streamlit web interface
+├── run_app.py            # Web interface launcher
+├── main.py               # Command line demo
 ├── requirements.txt
 ├── pyproject.toml
 ├── .python-version

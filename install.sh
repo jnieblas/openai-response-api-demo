@@ -124,8 +124,9 @@ main() {
     else
         echo "   source venv/bin/activate"
     fi
-    echo "3. Run the demo: python main.py"
-    echo "4. Check README.md for more information"
+    echo "3. Run the command line demo: python main.py"
+    echo "4. Launch the web interface: python run_app.py"
+    echo "5. Check README.md for more information"
     echo ""
     echo "Happy coding! 🚀"
 }
