@@ -2,8 +2,40 @@
 Pydantic models for OpenAI Responses API requests and responses.
 """
 
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List
 from pydantic import BaseModel, Field, validator
+
+
+class ToolFunction(BaseModel):
+    """Model for function tool definition."""
+    
+    name: str = Field(..., description="Name of the function")
+    description: Optional[str] = Field(None, description="Description of the function")
+    parameters: Dict[str, Any] = Field(..., description="Function parameters schema")
+
+
+class Tool(BaseModel):
+    """Model for tool definition."""
+    
+    type: str = Field(..., description="Type of tool (function, code_interpreter, file_search, web_search_preview, etc.)")
+    function: Optional[ToolFunction] = Field(None, description="Function definition for function tools")
+    
+    @validator('type')
+    def validate_type(cls, v):
+        """Validate tool type."""
+        valid_types = [
+            'function',  # Custom function tools
+            'code_interpreter',  # OpenAI hosted tools
+            'file_search',
+            'web_search_preview',
+            'web_search_preview_2025_03_11',
+            'image_generation',
+            'mcp',
+            'computer_use_preview'
+        ]
+        if v not in valid_types:
+            raise ValueError(f"Invalid tool type. Must be one of: {valid_types}")
+        return v
 
 
 class ResponseFormat(BaseModel):
@@ -59,6 +91,8 @@ class ResponseRequest(BaseModel):
     frequency_penalty: Optional[float] = Field(0.0, ge=-2.0, le=2.0, description="Frequency penalty")
     presence_penalty: Optional[float] = Field(0.0, ge=-2.0, le=2.0, description="Presence penalty")
     seed: Optional[int] = Field(None, description="Random seed for reproducible results")
+    tools: Optional[List[Tool]] = Field(None, description="List of tools available to the model")
+    tool_choice: Optional[Union[str, Dict[str, Any]]] = Field(None, description="Tool choice configuration")
     
     @validator('model')
     def validate_model(cls, v):
@@ -67,6 +101,15 @@ class ResponseRequest(BaseModel):
         if v not in valid_models:
             raise ValueError(f"Invalid model. Must be one of: {valid_models}")
         return v
+
+
+class ToolCall(BaseModel):
+    """Model for tool call in response."""
+    
+    id: str = Field(..., description="Tool call ID")
+    type: str = Field(..., description="Type of tool call")
+    function: Optional[Dict[str, Any]] = Field(None, description="Function call details")
+    hosted_tool: Optional[Dict[str, Any]] = Field(None, description="Hosted tool call details")
 
 
 class ResponseResponse(BaseModel):
@@ -85,7 +128,19 @@ class ResponseResponse(BaseModel):
     @property
     def content(self) -> str:
         """Get the content of the response."""
-        # For Responses API, the content is in output[0]['content'][0]['text']
+        # For Responses API with tools, the content is in output[1]['content'][0]['text']
+        # (first output is tool call, second is message)
+        if self.output and len(self.output) > 1:
+            # Look for message type output
+            for output_item in self.output:
+                if output_item.get('type') == 'message' and 'content' in output_item:
+                    content_list = output_item['content']
+                    if content_list and len(content_list) > 0:
+                        content_item = content_list[0]
+                        if 'text' in content_item:
+                            return content_item['text']
+        
+        # For Responses API without tools, the content is in output[0]['content'][0]['text']
         if self.output and len(self.output) > 0:
             output_item = self.output[0]
             if 'content' in output_item and len(output_item['content']) > 0:
@@ -135,3 +190,23 @@ class ResponseResponse(BaseModel):
         if self.usage:
             return self.usage.get('total_tokens', 0)
         return 0 
+
+    @property
+    def tool_calls(self) -> Optional[List[ToolCall]]:
+        """Get tool calls from the response."""
+        if not self.output:
+            return None
+        
+        tool_calls = []
+        for output_item in self.output:
+            if output_item.get('type') in ['web_search_call', 'function_call']:
+                # Create a ToolCall object from the output item
+                tool_call = ToolCall(
+                    id=output_item.get('id', ''),
+                    type=output_item.get('type', ''),
+                    function=output_item.get('action', {}),
+                    hosted_tool=output_item.get('action', {})
+                )
+                tool_calls.append(tool_call)
+        
+        return tool_calls if tool_calls else None 

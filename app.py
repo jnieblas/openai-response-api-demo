@@ -8,12 +8,13 @@ A user-friendly web interface for generating structured responses using OpenAI's
 import os
 import sys
 import streamlit as st
-from typing import Dict, Any, Optional
+import json
+from typing import Dict, Any, Optional, List
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from openai_responses import OpenAIResponsesAPI, ResponseFormat
+from openai_responses import OpenAIResponsesAPI, ResponseFormat, Tool, ToolFunction
 from openai_responses.exceptions import APIError, AuthenticationError
 
 
@@ -27,7 +28,7 @@ def setup_page():
     )
     
     st.title("🚀 OpenAI Responses API")
-    st.markdown("Generate structured responses with customizable parameters")
+    st.markdown("Generate structured responses with customizable parameters and tool calling")
 
 
 def create_sidebar():
@@ -75,6 +76,207 @@ def create_sidebar():
         "temperature": temperature,
         "top_p": top_p
     }
+
+
+def create_tools_section():
+    """Create the tools configuration section."""
+    st.header("🔧 Tools Configuration")
+    
+    # Enable tools
+    enable_tools = st.checkbox(
+        "Enable Tool Calling",
+        help="Enable function tools (your custom functions) or hosted tools (OpenAI's pre-built tools)."
+    )
+    
+    if not enable_tools:
+        return None, None
+    
+    # Tool type selection
+    tool_type = st.selectbox(
+        "Tool Type",
+        ["hosted_tool", "function"],
+        help="Choose between hosted tools (OpenAI's pre-built tools) or function tools (your custom functions)."
+    )
+    
+    tools = []
+    tool_choice = "auto"
+    
+    if tool_type == "hosted_tool":
+        # Hosted tool configuration (OpenAI's pre-built tools)
+        st.subheader("OpenAI Hosted Tools")
+        st.info("These are OpenAI's pre-built tools that you can use directly.")
+        
+        hosted_tool_options = {
+            "file_search": "Search through files in your workspace",
+            "web_search_preview": "Search the web for current information",
+            "computer_use_preview": "Interact with your computer (file operations, etc.)",
+            "code_interpreter": "Execute and analyze code",
+            "image_generation": "Generate images using DALL-E"
+        }
+        
+        selected_hosted_tools = st.multiselect(
+            "Select Hosted Tools",
+            options=list(hosted_tool_options.keys()),
+            help="Choose which OpenAI hosted tools to make available to the model."
+        )
+        
+        # Create hosted tool objects
+        for tool_id in selected_hosted_tools:
+            tool = Tool(type=tool_id)
+            tools.append(tool)
+        
+        # Show selected tools info
+        if selected_hosted_tools:
+            st.subheader("Selected Hosted Tools")
+            for tool_id in selected_hosted_tools:
+                with st.expander(f"📋 {tool_id}"):
+                    st.write(f"**Description:** {hosted_tool_options[tool_id]}")
+                    st.write(f"**Tool ID:** `{tool_id}`")
+    
+    elif tool_type == "function":
+        # Function tool configuration (your custom functions)
+        st.subheader("Custom Function Tools")
+        st.info("These are custom functions that you define with your own JSON schema.")
+        
+        # Function tool configuration
+        function_name = st.text_input(
+            "Function Name",
+            value="get_weather",
+            help="Name of your custom function."
+        )
+        
+        function_description = st.text_area(
+            "Function Description",
+            value="Get the current weather in a given location",
+            help="Description of what your function does."
+        )
+        
+        # Parameters configuration
+        st.subheader("Function Parameters")
+        st.write("Define the JSON schema for your function parameters:")
+        
+        # Simple parameter builder
+        num_params = st.number_input(
+            "Number of Parameters",
+            min_value=1,
+            max_value=10,
+            value=1,
+            help="How many parameters does your function need?"
+        )
+        
+        parameters = {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+        
+        for i in range(num_params):
+            st.write(f"**Parameter {i+1}:**")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                param_name = st.text_input(
+                    f"Parameter Name {i+1}",
+                    value=f"param_{i+1}",
+                    key=f"param_name_{i}"
+                )
+                
+                param_type = st.selectbox(
+                    f"Parameter Type {i+1}",
+                    ["string", "number", "integer", "boolean", "array", "object"],
+                    key=f"param_type_{i}"
+                )
+                
+                is_required = st.checkbox(
+                    f"Required {i+1}",
+                    value=True,
+                    key=f"required_{i}"
+                )
+            
+            with col2:
+                param_desc = st.text_input(
+                    f"Parameter Description {i+1}",
+                    value=f"Description for parameter {i+1}",
+                    key=f"param_desc_{i}"
+                )
+                
+                # Add enum support for strings
+                if param_type == "string":
+                    use_enum = st.checkbox(
+                        f"Use Enum Values {i+1}",
+                        key=f"use_enum_{i}"
+                    )
+                    if use_enum:
+                        enum_values = st.text_input(
+                            f"Enum Values (comma-separated) {i+1}",
+                            value="option1,option2,option3",
+                            key=f"enum_values_{i}"
+                        )
+                        enum_list = [v.strip() for v in enum_values.split(",")]
+                        parameters["properties"][param_name] = {
+                            "type": param_type,
+                            "description": param_desc,
+                            "enum": enum_list
+                        }
+                    else:
+                        parameters["properties"][param_name] = {
+                            "type": param_type,
+                            "description": param_desc
+                        }
+                else:
+                    parameters["properties"][param_name] = {
+                        "type": param_type,
+                        "description": param_desc
+                    }
+                
+                if is_required:
+                    parameters["required"].append(param_name)
+            
+            st.divider()
+        
+        # Create tool
+        if function_name and function_description:
+            tool = Tool(
+                type="function",
+                function=ToolFunction(
+                    name=function_name,
+                    description=function_description,
+                    parameters=parameters
+                )
+            )
+            tools.append(tool)
+            
+            # Show the generated JSON schema
+            st.subheader("Generated JSON Schema")
+            with st.expander("View Function Schema"):
+                st.json(parameters)
+    
+    # Tool choice configuration
+    st.subheader("Tool Choice")
+    tool_choice = st.selectbox(
+        "Tool Choice",
+        ["auto", "none"],
+        help="'auto' lets the model decide when to use tools, 'none' prevents tool usage."
+    )
+    
+    # Show tool configuration summary
+    if tools:
+        st.subheader("📋 Tool Configuration Summary")
+        for i, tool in enumerate(tools):
+            with st.expander(f"Tool {i+1}: {tool.type}"):
+                if tool.type in ["code_interpreter", "file_search", "web_search_preview", "web_search_preview_2025_03_11", "image_generation", "mcp", "computer_use_preview"]:
+                    st.write(f"**Type:** OpenAI Hosted Tool")
+                    st.write(f"**Tool ID:** `{tool.type}`")
+                    if tool.type in hosted_tool_options:
+                        st.write(f"**Description:** {hosted_tool_options[tool.type]}")
+                else:
+                    st.write(f"**Type:** Function Tool")
+                    st.write(f"**Function Name:** `{tool.function.name}`")
+                    st.write(f"**Description:** {tool.function.description}")
+                    st.write("**Parameters:**")
+                    st.json(tool.function.parameters)
+    
+    return tools, tool_choice
 
 
 def create_response_format_section():
@@ -184,7 +386,7 @@ def create_quick_templates():
                 st.rerun()
 
 
-def generate_response(api_key: str, prompt: str, response_format: Dict[str, Any], config: Dict[str, Any]):
+def generate_response(api_key: str, prompt: str, response_format: Dict[str, Any], config: Dict[str, Any], tools: Optional[List[Tool]] = None, tool_choice: Optional[str] = None):
     """Generate a response using the API."""
     try:
         # Initialize API client
@@ -202,7 +404,9 @@ def generate_response(api_key: str, prompt: str, response_format: Dict[str, Any]
             response_format=format_obj,
             model=config["model"],
             temperature=config["temperature"],
-            top_p=config["top_p"]
+            top_p=config["top_p"],
+            tools=tools,
+            tool_choice=tool_choice
         )
         
         return response, None
@@ -233,6 +437,18 @@ def display_response(response, error: Optional[str] = None):
             disabled=True,
             key="response_content"
         )
+        
+        # Display tool calls if any
+        if response.tool_calls:
+            st.subheader("🔧 Tool Calls")
+            for i, tool_call in enumerate(response.tool_calls):
+                with st.expander(f"Tool Call {i+1}: {tool_call.id}"):
+                    st.json({
+                        "id": tool_call.id,
+                        "type": tool_call.type,
+                        "function": tool_call.function,
+                        "hosted_tool": tool_call.hosted_tool
+                    })
         
         # Display metadata
         col1, col2, col3 = st.columns(3)
@@ -280,6 +496,9 @@ def main():
         # Prompt input
         prompt = create_prompt_section()
         
+        # Tools configuration
+        tools, tool_choice = create_tools_section()
+        
         # Response format configuration
         response_format = create_response_format_section()
         
@@ -295,7 +514,9 @@ def main():
                         api_key=config["api_key"],
                         prompt=prompt,
                         response_format=response_format,
-                        config=config
+                        config=config,
+                        tools=tools,
+                        tool_choice=tool_choice
                     )
                     display_response(response, error)
     
@@ -314,6 +535,16 @@ def main():
         st.write(f"**Tone:** {response_format['tone']}")
         st.write(f"**Length:** {response_format['length']}")
         st.write(f"**Language:** {response_format['language']}")
+        
+        # Tool configuration
+        if tools:
+            st.subheader("🔧 Tools")
+            st.write(f"**Tools Enabled:** ✅")
+            st.write(f"**Tool Choice:** {tool_choice}")
+            st.write(f"**Number of Tools:** {len(tools)}")
+        else:
+            st.subheader("🔧 Tools")
+            st.write("**Tools Enabled:** ❌")
         
         # API status
         st.subheader("🔑 API Status")

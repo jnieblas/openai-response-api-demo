@@ -4,11 +4,12 @@ Main client for OpenAI Responses API.
 
 import os
 import time
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List
 import requests
 from dotenv import load_dotenv
+import json
 
-from .models import ResponseFormat, ResponseResponse
+from .models import ResponseFormat, ResponseResponse, Tool, ToolCall
 from .exceptions import (
     OpenAIResponsesError,
     APIError,
@@ -76,6 +77,8 @@ class OpenAIResponsesAPI:
         model: str = "gpt-4o",
         temperature: Optional[float] = 0.7,
         top_p: Optional[float] = 1.0,
+        tools: Optional[List[Union[Tool, Dict[str, Any]]]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
     ) -> ResponseResponse:
         """
         Generate a response using the OpenAI Responses API.
@@ -86,6 +89,8 @@ class OpenAIResponsesAPI:
             model: OpenAI model to use.
             temperature: Sampling temperature (0.0 to 2.0).
             top_p: Nucleus sampling parameter (0.0 to 1.0).
+            tools: List of tools available to the model (function tools or hosted tools).
+            tool_choice: Tool choice configuration ('auto', 'none', or specific tool).
             
         Returns:
             ResponseResponse object containing the generated response.
@@ -101,6 +106,13 @@ class OpenAIResponsesAPI:
             if isinstance(response_format, dict):
                 response_format = ResponseFormat(**response_format)
             
+            # Convert dict tools to Tool objects if needed
+            if tools:
+                tools = [
+                    Tool(**tool) if isinstance(tool, dict) else tool
+                    for tool in tools
+                ]
+            
             # Create request data with correct API structure
             request_data = {
                 "model": model,
@@ -113,6 +125,14 @@ class OpenAIResponsesAPI:
                 "temperature": temperature,
                 "top_p": top_p,
             }
+            
+            # Add tools if provided
+            if tools:
+                request_data["tools"] = [tool.model_dump(exclude_none=True) for tool in tools]
+            
+            # Add tool_choice if provided
+            if tool_choice:
+                request_data["tool_choice"] = tool_choice
             
             # Remove None values
             request_data = {k: v for k, v in request_data.items() if v is not None}
@@ -129,6 +149,45 @@ class OpenAIResponsesAPI:
             if isinstance(e, OpenAIResponsesError):
                 raise
             raise APIError(f"Unexpected error: {str(e)}")
+    
+    def create_function_tool(
+        self,
+        name: str,
+        description: str,
+        parameters: Dict[str, Any]
+    ) -> Tool:
+        """
+        Create a function tool for use with the API.
+        
+        Args:
+            name: Name of the function.
+            description: Description of what the function does.
+            parameters: JSON schema for the function parameters.
+            
+        Returns:
+            Tool object representing the function tool.
+        """
+        from .models import ToolFunction
+        
+        function = ToolFunction(
+            name=name,
+            description=description,
+            parameters=parameters
+        )
+        
+        return Tool(type="function", function=function)
+    
+    def create_hosted_tool(self, hosted_tool_id: str) -> Tool:
+        """
+        Create a hosted tool reference for use with the API.
+        
+        Args:
+            hosted_tool_id: ID of the hosted tool (e.g., 'web_search_preview', 'file_search').
+            
+        Returns:
+            Tool object representing the hosted tool.
+        """
+        return Tool(type=hosted_tool_id)
     
     def _make_request(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -188,6 +247,8 @@ class OpenAIResponsesAPI:
         style: str = "professional",
         tone: str = "polite",
         length: Optional[str] = None,
+        tools: Optional[List[Union[Tool, Dict[str, Any]]]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         **kwargs
     ) -> ResponseResponse:
         """
@@ -198,6 +259,8 @@ class OpenAIResponsesAPI:
             style: Email style (professional, casual, formal, friendly, business).
             tone: Email tone (friendly, polite, assertive, neutral, enthusiastic, sympathetic).
             length: Desired length (short, medium, long).
+            tools: List of tools available to the model.
+            tool_choice: Tool choice configuration.
             **kwargs: Additional parameters for generate_response.
             
         Returns:
@@ -210,7 +273,13 @@ class OpenAIResponsesAPI:
             length=length,
         )
         
-        return self.generate_response(prompt, response_format, **kwargs)
+        return self.generate_response(
+            prompt, 
+            response_format, 
+            tools=tools,
+            tool_choice=tool_choice,
+            **kwargs
+        )
     
     def create_letter_response(
         self,
@@ -218,6 +287,8 @@ class OpenAIResponsesAPI:
         style: str = "formal",
         tone: str = "polite",
         length: Optional[str] = None,
+        tools: Optional[List[Union[Tool, Dict[str, Any]]]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         **kwargs
     ) -> ResponseResponse:
         """
@@ -228,6 +299,8 @@ class OpenAIResponsesAPI:
             style: Letter style (professional, casual, formal, friendly, business).
             tone: Letter tone (friendly, polite, assertive, neutral, enthusiastic, sympathetic).
             length: Desired length (short, medium, long).
+            tools: List of tools available to the model.
+            tool_choice: Tool choice configuration.
             **kwargs: Additional parameters for generate_response.
             
         Returns:
@@ -240,7 +313,13 @@ class OpenAIResponsesAPI:
             length=length,
         )
         
-        return self.generate_response(prompt, response_format, **kwargs)
+        return self.generate_response(
+            prompt, 
+            response_format, 
+            tools=tools,
+            tool_choice=tool_choice,
+            **kwargs
+        )
     
     def create_message_response(
         self,
@@ -248,6 +327,8 @@ class OpenAIResponsesAPI:
         style: str = "casual",
         tone: str = "friendly",
         length: Optional[str] = None,
+        tools: Optional[List[Union[Tool, Dict[str, Any]]]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         **kwargs
     ) -> ResponseResponse:
         """
@@ -258,6 +339,8 @@ class OpenAIResponsesAPI:
             style: Message style (professional, casual, formal, friendly, business).
             tone: Message tone (friendly, polite, assertive, neutral, enthusiastic, sympathetic).
             length: Desired length (short, medium, long).
+            tools: List of tools available to the model.
+            tool_choice: Tool choice configuration.
             **kwargs: Additional parameters for generate_response.
             
         Returns:
@@ -270,7 +353,13 @@ class OpenAIResponsesAPI:
             length=length,
         )
         
-        return self.generate_response(prompt, response_format, **kwargs)
+        return self.generate_response(
+            prompt, 
+            response_format, 
+            tools=tools,
+            tool_choice=tool_choice,
+            **kwargs
+        )
     
     def close(self):
         """Close the session and clean up resources."""
