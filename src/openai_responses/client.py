@@ -3,13 +3,12 @@ Main client for OpenAI Responses API.
 """
 
 import os
-import json
 import time
 from typing import Dict, Any, Optional, Union
 import requests
 from dotenv import load_dotenv
 
-from .models import ResponseFormat, ResponseRequest, ResponseResponse
+from .models import ResponseFormat, ResponseResponse
 from .exceptions import (
     OpenAIResponsesError,
     APIError,

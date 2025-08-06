@@ -2,7 +2,7 @@
 Pydantic models for OpenAI Responses API requests and responses.
 """
 
-from typing import Dict, Any, Optional, Literal, Union
+from typing import Dict, Any, Optional, Union
 from pydantic import BaseModel, Field, validator
 
 

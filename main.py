@@ -8,13 +8,12 @@ to generate various types of structured responses.
 
 import os
 import sys
-from typing import Dict, Any
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from openai_responses import OpenAIResponsesAPI, ResponseFormat
-from openai_responses.exceptions import OpenAIResponsesError, APIError, AuthenticationError
+from openai_responses.exceptions import APIError, AuthenticationError
 
 
 def print_separator(title: str):

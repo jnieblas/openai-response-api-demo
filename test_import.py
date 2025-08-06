@@ -21,13 +21,13 @@ def test_imports():
         from openai_responses.client import OpenAIResponsesAPI as Client
         print("✅ Client module import successful")
         
-        from openai_responses.models import ResponseFormat, ResponseRequest, ResponseResponse
+        from openai_responses.models import ResponseFormat as ModelFormat, ResponseResponse
         print("✅ Models module import successful")
         
         from openai_responses.exceptions import OpenAIResponsesError, APIError, ValidationError
         print("✅ Exceptions module import successful")
         
-        # Test creating instances
+        # Test creating instances using main package imports
         api = OpenAIResponsesAPI(api_key="test-key")
         print("✅ API client instantiation successful")
         
