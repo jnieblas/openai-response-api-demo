@@ -11,6 +11,7 @@ A clean, type-safe Python interface for OpenAI's Responses API, featuring compre
 - **Web Interface**: Streamlit-based web UI for interactive usage
 - **Multiple Response Types**: Email, letter, message, and custom formats
 - **Customizable Parameters**: Temperature, top-p, model selection, and more
+- **GPT-5 Support**: Native support for GPT-5 with effort and verbosity parameters
 - **Hosted Tools**: Support for OpenAI's hosted tools
 - **Function Tools**: Custom function definitions with JSON schema
 
@@ -199,6 +200,101 @@ message_response = api.create_message_response(
 )
 ```
 
+## 🤖 GPT-5 Support
+
+This interface includes native support for OpenAI's GPT-5 model with its new parameter system.
+
+### GPT-5 Parameters
+
+GPT-5 uses a different parameter system than traditional models:
+
+- **`effort`**: Controls how much effort the model puts into generating the response
+  - Options: `"low"`, `"medium"`, `"high"`
+  - Default: `"medium"`
+- **`verbosity`**: Controls the level of detail in the response
+  - Options: `"low"`, `"medium"`, `"high"`
+  - Default: `"medium"`
+
+### Using GPT-5
+
+```python
+# Basic GPT-5 usage
+response = api.generate_response(
+    prompt="Explain quantum computing in simple terms",
+    response_format={"type": "response", "style": "professional"},
+    model="gpt-5",
+    effort="high",
+    verbosity="medium"
+)
+
+# GPT-5 with tools
+response = api.generate_response(
+    prompt="Search for the latest AI research and summarize it",
+    response_format={"type": "message", "style": "casual"},
+    model="gpt-5",
+    effort="medium",
+    verbosity="high",
+    tools=[web_search_tool],
+    tool_choice="auto"
+)
+
+# GPT-5 with response-specific methods
+email_response = api.create_email_response(
+    prompt="Write a professional email about recent developments",
+    style="professional",
+    tone="polite",
+    model="gpt-5",
+    effort="high",
+    verbosity="medium"
+)
+```
+
+### Model Compatibility
+
+- **GPT-5**: Uses `effort` and `verbosity` parameters (temperature/top-p not supported)
+- **Other Models** (GPT-4o, GPT-4o-mini, etc.): Use `temperature` and `top_p` parameters
+
+The interface automatically handles parameter compatibility based on the selected model.
+
+## 💬 Conversation Support
+
+This interface supports natural conversation continuity using OpenAI's native `previous_response_id` parameter.
+
+### Native Conversation Continuity
+
+The Responses API provides built-in conversation support through the `previous_response_id` parameter, which is much more efficient than manually managing conversation context.
+
+```python
+# First response
+response1 = api.generate_response(
+    prompt="What's the weather like in New York?",
+    response_format={"type": "message", "style": "casual"}
+)
+
+# Follow-up response with conversation continuity
+response2 = api.generate_response(
+    prompt="How does that compare to yesterday?",
+    response_format={"type": "message", "style": "casual"},
+    previous_response_id=response1.id  # Links to previous response
+)
+```
+
+### Web Interface Conversation Features
+
+The web interface automatically manages conversation continuity:
+
+- **Automatic Linking**: Each response is automatically linked to the previous one
+- **Conversation History**: View all exchanges in expandable sections
+- **New Conversation**: Start fresh conversations with the "New Conversation" button
+- **Performance Optimized**: Uses native API conversation support for better performance
+
+### Conversation Flow
+
+1. **Initial Question**: Ask your first question
+2. **Follow-up Questions**: Ask related questions that build on previous responses
+3. **Context Awareness**: The model automatically considers previous exchanges
+4. **Conversation Management**: View history and start new conversations as needed
+
 ## 🌐 Web Interface
 
 Launch the interactive web interface:
@@ -248,16 +344,16 @@ response = api.generate_response(
     tool_choice="auto"
 )
 
-# None: Prevent tool usage
+# None: Don't use any tools
 response = api.generate_response(
-    prompt="What's the weather like?",
+    prompt="Write a simple response",
     tools=[weather_tool],
     tool_choice="none"
 )
 
-# Specific: Force use of a particular tool
+# Specific tool: Force use of a particular tool
 response = api.generate_response(
-    prompt="What's the weather like?",
+    prompt="Get the weather for New York",
     tools=[weather_tool],
     tool_choice={"type": "function", "function": {"name": "get_weather"}}
 )

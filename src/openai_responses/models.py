@@ -93,6 +93,7 @@ class ResponseRequest(BaseModel):
     seed: Optional[int] = Field(None, description="Random seed for reproducible results")
     tools: Optional[List[Tool]] = Field(None, description="List of tools available to the model")
     tool_choice: Optional[Union[str, Dict[str, Any]]] = Field(None, description="Tool choice configuration")
+    previous_response_id: Optional[str] = Field(None, description="ID of the previous response for conversation continuity")
     
     @validator('model')
     def validate_model(cls, v):

@@ -44,6 +44,62 @@ def create_weather_tool() -> Tool:
     )
 
 
+def demo_gpt5_parameters():
+    """Demonstrate GPT-5 specific parameters (effort and verbosity)."""
+    print("\n" + "=" * 60)
+    print("GPT-5 Parameters Demo")
+    print("=" * 60)
+    
+    try:
+        # Initialize API client
+        api = OpenAIResponsesAPI()
+        
+        # Create response format
+        response_format = ResponseFormat(
+            type="response",
+            style="professional",
+            tone="neutral",
+            length="medium"
+        )
+        
+        # Test different effort levels
+        effort_levels = ["low", "medium", "high"]
+        
+        for effort in effort_levels:
+            print(f"\n--- Testing with effort: {effort} ---")
+            
+            response = api.generate_response(
+                prompt="Explain quantum computing in simple terms",
+                response_format=response_format,
+                model="gpt-5",
+                effort=effort,
+                verbosity="medium"
+            )
+            
+            print(f"Response (effort={effort}):\n{response.content[:200]}...")
+            print(f"Tokens used: {response.total_tokens}")
+        
+        # Test different verbosity levels
+        verbosity_levels = ["low", "medium", "high"]
+        
+        for verbosity in verbosity_levels:
+            print(f"\n--- Testing with verbosity: {verbosity} ---")
+            
+            response = api.generate_response(
+                prompt="What is machine learning?",
+                response_format=response_format,
+                model="gpt-5",
+                effort="medium",
+                verbosity=verbosity
+            )
+            
+            print(f"Response (verbosity={verbosity}):\n{response.content[:200]}...")
+            print(f"Tokens used: {response.total_tokens}")
+        
+    except Exception as e:
+        print(f"Error: {e}")
+
+
 def demo_basic_usage():
     """Demonstrate basic API usage."""
     print("=" * 60)
@@ -311,6 +367,7 @@ def main():
     demo_tool_calling()
     demo_response_methods()
     demo_hosted_tools()
+    demo_gpt5_parameters() # Added this line to call the new demo function
     
     print("\n" + "=" * 60)
     print("Demo Complete!")

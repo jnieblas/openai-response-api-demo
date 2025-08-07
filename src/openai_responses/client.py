@@ -75,10 +75,13 @@ class OpenAIResponsesAPI:
         prompt: str,
         response_format: Union[ResponseFormat, Dict[str, Any]],
         model: str = "gpt-4o",
-        temperature: Optional[float] = 0.7,
-        top_p: Optional[float] = 1.0,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+        effort: Optional[str] = None,
+        verbosity: Optional[str] = None,
         tools: Optional[List[Union[Tool, Dict[str, Any]]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        previous_response_id: Optional[str] = None,
     ) -> ResponseResponse:
         """
         Generate a response using the OpenAI Responses API.
@@ -87,10 +90,13 @@ class OpenAIResponsesAPI:
             prompt: The prompt to generate a response for.
             response_format: Format configuration for the response.
             model: OpenAI model to use.
-            temperature: Sampling temperature (0.0 to 2.0).
-            top_p: Nucleus sampling parameter (0.0 to 1.0).
+            temperature: Sampling temperature (0.0 to 2.0) - not used with GPT-5.
+            top_p: Nucleus sampling parameter (0.0 to 1.0) - not used with GPT-5.
+            effort: GPT-5 effort level ('low', 'medium', 'high') - only used with GPT-5.
+            verbosity: GPT-5 verbosity level ('low', 'medium', 'high') - only used with GPT-5.
             tools: List of tools available to the model (function tools or hosted tools).
             tool_choice: Tool choice configuration ('auto', 'none', or specific tool).
+            previous_response_id: ID of the previous response for conversation continuity.
             
         Returns:
             ResponseResponse object containing the generated response.
@@ -122,9 +128,25 @@ class OpenAIResponsesAPI:
                         "type": "text"
                     }
                 },
-                "temperature": temperature,
-                "top_p": top_p,
             }
+            
+            # Add model-specific parameters
+            if model == "gpt-5":
+                # GPT-5 uses effort and verbosity instead of temperature/top_p
+                if effort:
+                    request_data["effort"] = effort
+                if verbosity:
+                    request_data["verbosity"] = verbosity
+            else:
+                # Traditional models use temperature and top_p
+                if temperature is not None:
+                    request_data["temperature"] = temperature
+                if top_p is not None:
+                    request_data["top_p"] = top_p
+            
+            # Add previous_response_id for conversation continuity
+            if previous_response_id:
+                request_data["previous_response_id"] = previous_response_id
             
             # Add tools if provided
             if tools:
@@ -249,36 +271,51 @@ class OpenAIResponsesAPI:
         length: Optional[str] = None,
         tools: Optional[List[Union[Tool, Dict[str, Any]]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        previous_response_id: Optional[str] = None,
         **kwargs
     ) -> ResponseResponse:
         """
-        Generate an email response.
+        Create an email response with professional formatting.
         
         Args:
-            prompt: The prompt describing what email to generate.
-            style: Email style (professional, casual, formal, friendly, business).
-            tone: Email tone (friendly, polite, assertive, neutral, enthusiastic, sympathetic).
-            length: Desired length (short, medium, long).
+            prompt: The email content prompt.
+            style: Email style ('professional', 'casual', 'formal').
+            tone: Email tone ('polite', 'friendly', 'formal').
+            length: Response length ('short', 'medium', 'long').
             tools: List of tools available to the model.
             tool_choice: Tool choice configuration.
-            **kwargs: Additional parameters for generate_response.
+            previous_response_id: ID of the previous response for conversation continuity.
+            **kwargs: Additional parameters (temperature, top_p, effort, verbosity, model).
             
         Returns:
             ResponseResponse object containing the generated email.
         """
+        # Create response format for email
         response_format = ResponseFormat(
             type="email",
             style=style,
             tone=tone,
-            length=length,
+            length=length
         )
         
+        # Extract model-specific parameters
+        model = kwargs.get("model", "gpt-4o")
+        temperature = kwargs.get("temperature")
+        top_p = kwargs.get("top_p")
+        effort = kwargs.get("effort")
+        verbosity = kwargs.get("verbosity")
+        
         return self.generate_response(
-            prompt, 
-            response_format, 
+            prompt=prompt,
+            response_format=response_format,
+            model=model,
+            temperature=temperature,
+            top_p=top_p,
+            effort=effort,
+            verbosity=verbosity,
             tools=tools,
             tool_choice=tool_choice,
-            **kwargs
+            previous_response_id=previous_response_id
         )
     
     def create_letter_response(
@@ -289,36 +326,51 @@ class OpenAIResponsesAPI:
         length: Optional[str] = None,
         tools: Optional[List[Union[Tool, Dict[str, Any]]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        previous_response_id: Optional[str] = None,
         **kwargs
     ) -> ResponseResponse:
         """
-        Generate a letter response.
+        Create a letter response with formal formatting.
         
         Args:
-            prompt: The prompt describing what letter to generate.
-            style: Letter style (professional, casual, formal, friendly, business).
-            tone: Letter tone (friendly, polite, assertive, neutral, enthusiastic, sympathetic).
-            length: Desired length (short, medium, long).
+            prompt: The letter content prompt.
+            style: Letter style ('formal', 'professional', 'casual').
+            tone: Letter tone ('polite', 'formal', 'friendly').
+            length: Response length ('short', 'medium', 'long').
             tools: List of tools available to the model.
             tool_choice: Tool choice configuration.
-            **kwargs: Additional parameters for generate_response.
+            previous_response_id: ID of the previous response for conversation continuity.
+            **kwargs: Additional parameters (temperature, top_p, effort, verbosity, model).
             
         Returns:
             ResponseResponse object containing the generated letter.
         """
+        # Create response format for letter
         response_format = ResponseFormat(
             type="letter",
             style=style,
             tone=tone,
-            length=length,
+            length=length
         )
         
+        # Extract model-specific parameters
+        model = kwargs.get("model", "gpt-4o")
+        temperature = kwargs.get("temperature")
+        top_p = kwargs.get("top_p")
+        effort = kwargs.get("effort")
+        verbosity = kwargs.get("verbosity")
+        
         return self.generate_response(
-            prompt, 
-            response_format, 
+            prompt=prompt,
+            response_format=response_format,
+            model=model,
+            temperature=temperature,
+            top_p=top_p,
+            effort=effort,
+            verbosity=verbosity,
             tools=tools,
             tool_choice=tool_choice,
-            **kwargs
+            previous_response_id=previous_response_id
         )
     
     def create_message_response(
@@ -329,36 +381,51 @@ class OpenAIResponsesAPI:
         length: Optional[str] = None,
         tools: Optional[List[Union[Tool, Dict[str, Any]]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        previous_response_id: Optional[str] = None,
         **kwargs
     ) -> ResponseResponse:
         """
-        Generate a message response.
+        Create a message response with casual formatting.
         
         Args:
-            prompt: The prompt describing what message to generate.
-            style: Message style (professional, casual, formal, friendly, business).
-            tone: Message tone (friendly, polite, assertive, neutral, enthusiastic, sympathetic).
-            length: Desired length (short, medium, long).
+            prompt: The message content prompt.
+            style: Message style ('casual', 'friendly', 'professional').
+            tone: Message tone ('friendly', 'casual', 'polite').
+            length: Response length ('short', 'medium', 'long').
             tools: List of tools available to the model.
             tool_choice: Tool choice configuration.
-            **kwargs: Additional parameters for generate_response.
+            previous_response_id: ID of the previous response for conversation continuity.
+            **kwargs: Additional parameters (temperature, top_p, effort, verbosity, model).
             
         Returns:
             ResponseResponse object containing the generated message.
         """
+        # Create response format for message
         response_format = ResponseFormat(
             type="message",
             style=style,
             tone=tone,
-            length=length,
+            length=length
         )
         
+        # Extract model-specific parameters
+        model = kwargs.get("model", "gpt-4o")
+        temperature = kwargs.get("temperature")
+        top_p = kwargs.get("top_p")
+        effort = kwargs.get("effort")
+        verbosity = kwargs.get("verbosity")
+        
         return self.generate_response(
-            prompt, 
-            response_format, 
+            prompt=prompt,
+            response_format=response_format,
+            model=model,
+            temperature=temperature,
+            top_p=top_p,
+            effort=effort,
+            verbosity=verbosity,
             tools=tools,
             tool_choice=tool_choice,
-            **kwargs
+            previous_response_id=previous_response_id
         )
     
     def close(self):

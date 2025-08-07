@@ -94,56 +94,85 @@ def create_sidebar():
     # Model selection
     model = st.sidebar.selectbox(
         "Model",
-        ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
+        ["gpt-5","gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
         index=0,
         help="Select the OpenAI model to use for generation."
     )
     
-    # Temperature slider
-    temperature = st.sidebar.slider(
-        "Temperature",
-        min_value=0.0,
-        max_value=2.0,
-        value=0.7,
-        step=0.1,
-        help="Controls randomness. Lower values are more deterministic, higher values more creative."
-    )
-    
-    # Top-p slider
-    top_p = st.sidebar.slider(
-        "Top-p",
-        min_value=0.0,
-        max_value=1.0,
-        value=1.0,
-        step=0.1,
-        help="Controls diversity via nucleus sampling. Lower values focus on most likely tokens."
-    )
-    
-    return {
-        "api_key": api_key,
-        "model": model,
-        "temperature": temperature,
-        "top_p": top_p
-    }
+    # Conditional parameters based on model
+    if model == "gpt-5":
+        # GPT-5 specific parameters
+        st.sidebar.subheader("GPT-5 Parameters")
+        
+        effort = st.sidebar.selectbox(
+            "Effort",
+            ["low", "medium", "high"],
+            index=1,
+            help="Controls how much effort the model puts into generating the response."
+        )
+        
+        verbosity = st.sidebar.selectbox(
+            "Verbosity",
+            ["low", "medium", "high"],
+            index=1,
+            help="Controls the level of detail in the response."
+        )
+        
+        return {
+            "api_key": api_key,
+            "model": model,
+            "effort": effort,
+            "verbosity": verbosity
+        }
+    else:
+        # Traditional parameters for other models
+        st.sidebar.subheader("Generation Parameters")
+        
+        temperature = st.sidebar.slider(
+            "Temperature",
+            min_value=0.0,
+            max_value=2.0,
+            value=0.7,
+            step=0.1,
+            help="Controls randomness. Lower values are more deterministic, higher values more creative."
+        )
+        
+        top_p = st.sidebar.slider(
+            "Top-p",
+            min_value=0.0,
+            max_value=1.0,
+            value=1.0,
+            step=0.1,
+            help="Controls diversity via nucleus sampling. Lower values focus on most likely tokens."
+        )
+        
+        return {
+            "api_key": api_key,
+            "model": model,
+            "temperature": temperature,
+            "top_p": top_p
+        }
 
 
 def create_tools_section():
     """Create the tools configuration section."""
     st.header("🔧 Tools Configuration")
     
-    # Enable tools
+    # Enable tools (default to True)
     enable_tools = st.checkbox(
         "Enable Tool Calling",
+        value=True,
         help="Enable function tools (your custom functions) or hosted tools (OpenAI's pre-built tools)."
     )
     
     if not enable_tools:
         return None, None
     
-    # Tool type selection
+    # Tool type selection (default to hosted_tool)
     tool_type = st.selectbox(
         "Tool Type",
         ["hosted_tool", "function"],
+        index=0,
         help="Choose between hosted tools (OpenAI's pre-built tools) or function tools (your custom functions)."
     )
     
@@ -153,7 +182,6 @@ def create_tools_section():
     if tool_type == "hosted_tool":
         # Hosted tool configuration (OpenAI's pre-built tools)
         st.subheader("OpenAI Hosted Tools")
-        st.info("These are OpenAI's pre-built tools that you can use directly.")
         
         hosted_tool_options = {
             "file_search": "Search through files in your workspace",
@@ -166,6 +194,7 @@ def create_tools_section():
         selected_hosted_tools = st.multiselect(
             "Select Hosted Tools",
             options=list(hosted_tool_options.keys()),
+            default=["web_search_preview"],
             help="Choose which OpenAI hosted tools to make available to the model."
         )
         
@@ -383,59 +412,57 @@ def create_prompt_section():
     """Create the prompt input section."""
     st.header("💭 Prompt")
     
-    prompt = st.text_area(
-        "Enter your prompt",
-        height=150,
-        placeholder="Describe what kind of response you want to generate. For example: 'Write an email declining a meeting request due to a scheduling conflict'",
-        help="Describe the response you want to generate. Be specific about the context and requirements."
-    )
+    # Add custom CSS for black X button
+    st.markdown("""
+    <style>
+    /* Style the clear conversation button to be black */
+    div[data-testid="stButton"] button[kind="secondary"] {
+        background-color: #000000 !important;
+        color: white !important;
+        border-color: #000000 !important;
+        font-weight: bold !important;
+    }
+    
+    div[data-testid="stButton"] button[kind="secondary"]:hover {
+        background-color: #333333 !important;
+        border-color: #333333 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Create a row with prompt input and clear button
+    col1, col2 = st.columns([20, 1])
+    
+    with col1:
+        prompt = st.text_area(
+            "Enter your prompt",
+            height=150,
+            placeholder="Describe what kind of response you want to generate. For example: 'Write an email declining a meeting request due to a scheduling conflict'",
+            help="Describe the response you want to generate. Be specific about the context and requirements."
+        )
+    
+    with col2:
+        # Add spacing to align with the text area
+        st.write("")  # Empty space for alignment
+        st.write("")  # More spacing
+        
+        # Clear conversation button with black X and styling
+        if st.button(
+            "✕", 
+            help="Clear conversation context", 
+            key="clear_conversation",
+            use_container_width=True,
+            type="secondary"
+        ):
+            st.session_state.conversation_history = []
+            st.session_state.last_response = None
+            st.session_state.last_error = None
+            st.rerun()
     
     return prompt
 
 
-def create_quick_templates():
-    """Create quick template buttons."""
-    st.header("🎯 Quick Templates")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    templates = {
-        "📧 Professional Email": {
-            "prompt": "Write a professional email declining a meeting request from a colleague due to a scheduling conflict",
-            "format": {"type": "email", "style": "professional", "tone": "polite", "length": "short"}
-        },
-        "📝 Formal Letter": {
-            "prompt": "Write a formal letter of recommendation for a former employee",
-            "format": {"type": "letter", "style": "formal", "tone": "professional", "length": "long"}
-        },
-        "💬 Casual Message": {
-            "prompt": "Write a friendly message to congratulate someone on their promotion",
-            "format": {"type": "message", "style": "casual", "tone": "friendly", "length": "short"}
-        },
-        "🙏 Thank You Note": {
-            "prompt": "Write a thank you message for a birthday gift from a friend",
-            "format": {"type": "message", "style": "casual", "tone": "enthusiastic", "length": "medium"}
-        },
-        "📋 Meeting Confirmation": {
-            "prompt": "Write a brief email confirming receipt of an important document",
-            "format": {"type": "email", "style": "professional", "tone": "neutral", "length": "short"}
-        },
-        "🎉 Celebration": {
-            "prompt": "Write a creative story about a magical forest",
-            "format": {"type": "message", "style": "casual", "tone": "enthusiastic", "length": "long"}
-        }
-    }
-    
-    for i, (template_name, template_data) in enumerate(templates.items()):
-        col = [col1, col2, col3][i % 3]
-        with col:
-            if st.button(template_name, key=f"template_{i}"):
-                st.session_state.prompt = template_data["prompt"]
-                st.session_state.response_format = template_data["format"]
-                st.rerun()
-
-
-def generate_response(api_key: str, prompt: str, response_format: Dict[str, Any], config: Dict[str, Any], tools: Optional[List[Tool]] = None, tool_choice: Optional[str] = None):
+def generate_response(api_key: str, prompt: str, response_format: Dict[str, Any], config: Dict[str, Any], tools: Optional[List[Tool]] = None, tool_choice: Optional[str] = None, previous_response_id: Optional[str] = None):
     """Generate a response using the API."""
     try:
         # Initialize API client
@@ -447,16 +474,29 @@ def generate_response(api_key: str, prompt: str, response_format: Dict[str, Any]
         # Create response format object
         format_obj = ResponseFormat(**response_format)
         
-        # Generate response
-        response = api.generate_response(
-            prompt=prompt,
-            response_format=format_obj,
-            model=config["model"],
-            temperature=config["temperature"],
-            top_p=config["top_p"],
-            tools=tools,
-            tool_choice=tool_choice
-        )
+        # Prepare parameters based on model
+        if config["model"] == "gpt-5":
+            # GPT-5 uses effort and verbosity
+            response = api.generate_response(
+                prompt=prompt,
+                response_format=format_obj,
+                model=config["model"],
+                tools=tools,
+                tool_choice=tool_choice,
+                previous_response_id=previous_response_id
+            )
+        else:
+            # Traditional models use temperature and top_p
+            response = api.generate_response(
+                prompt=prompt,
+                response_format=format_obj,
+                model=config["model"],
+                temperature=config.get("temperature"),
+                top_p=config.get("top_p"),
+                tools=tools,
+                tool_choice=tool_choice,
+                previous_response_id=previous_response_id
+            )
         
         return response, None
         
@@ -470,7 +510,7 @@ def generate_response(api_key: str, prompt: str, response_format: Dict[str, Any]
 
 def display_response(response, error: Optional[str] = None):
     """Display the generated response or error."""
-    st.header("📤 Generated Response")
+    st.header("�� Generated Response")
     
     if error:
         st.error(error)
@@ -562,6 +602,8 @@ def main():
         st.session_state.last_response = None
     if "last_error" not in st.session_state:
         st.session_state.last_error = None
+    if "conversation_history" not in st.session_state:
+        st.session_state.conversation_history = []
     
     # Create sidebar
     config = create_sidebar()
@@ -570,8 +612,24 @@ def main():
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        # Quick templates
-        create_quick_templates()
+        # Display conversation history
+        if st.session_state.conversation_history:
+            st.subheader("📜 Conversation History")
+            
+            # Show warning if conversation is getting long
+            if len(st.session_state.conversation_history) >= 8:
+                st.warning("⚠️ Conversation history is getting long. Consider starting a new conversation for better performance.")
+            
+            for i, (user_msg, assistant_msg) in enumerate(st.session_state.conversation_history):
+                with st.expander(f"Exchange {i+1}", expanded=False):
+                    st.write("**👤 You:**")
+                    st.write(user_msg)
+                    st.write("**🤖 Assistant:**")
+                    st.markdown(f"""
+                    <div class="response-markdown">
+                    {assistant_msg}
+                    </div>
+                    """, unsafe_allow_html=True)
         
         # Prompt input
         prompt = create_prompt_section()
@@ -590,16 +648,31 @@ def main():
                 st.error("Please provide an OpenAI API key.")
             else:
                 with st.spinner("Generating response..."):
+                    # Get previous response ID for conversation continuity
+                    previous_response_id = None
+                    if st.session_state.last_response:
+                        previous_response_id = st.session_state.last_response.id
+                    
                     response, error = generate_response(
                         api_key=config["api_key"],
                         prompt=prompt,
                         response_format=response_format,
                         config=config,
                         tools=tools,
-                        tool_choice=tool_choice
+                        tool_choice=tool_choice,
+                        previous_response_id=previous_response_id
                     )
+                    
+                    if response and not error:
+                        # Add to conversation history for display purposes
+                        st.session_state.conversation_history.append((prompt, response.content))
+                        # Limit history to last 10 exchanges for display
+                        if len(st.session_state.conversation_history) > 10:
+                            st.session_state.conversation_history = st.session_state.conversation_history[-10:]
+                    
                     st.session_state.last_response = response
                     st.session_state.last_error = error
+                    st.rerun()
     
     # Always display the last response if it exists
     if st.session_state.last_response or st.session_state.last_error:
@@ -611,8 +684,14 @@ def main():
         
         st.subheader("Model Configuration")
         st.write(f"**Model:** {config['model']}")
-        st.write(f"**Temperature:** {config['temperature']}")
-        st.write(f"**Top-p:** {config['top_p']}")
+        
+        # Display model-specific parameters
+        if config['model'] == "gpt-5":
+            st.write(f"**Effort:** {config['effort']}")
+            st.write(f"**Verbosity:** {config['verbosity']}")
+        else:
+            st.write(f"**Temperature:** {config['temperature']}")
+            st.write(f"**Top-p:** {config['top_p']}")
         
         st.subheader("Response Format")
         st.write(f"**Type:** {response_format['type']}")
@@ -637,6 +716,15 @@ def main():
             st.success("API key configured")
         else:
             st.warning("No API key provided")
+        
+        # Conversation statistics
+        st.subheader("💬 Conversation")
+        exchange_count = len(st.session_state.conversation_history)
+        if exchange_count > 0:
+            st.metric("Exchanges", exchange_count)
+            st.info(f"Current conversation has {exchange_count} exchange(s)")
+        else:
+            st.info("No conversation history yet")
     
     # Footer
     st.markdown("---")
