@@ -410,7 +410,7 @@ def create_response_format_section():
 
 def create_prompt_section():
     """Create the prompt input section."""
-    st.header("💭 Prompt")
+    st.header("Prompt")
     
     # Add custom CSS for black X button
     st.markdown("""
@@ -483,7 +483,9 @@ def generate_response(api_key: str, prompt: str, response_format: Dict[str, Any]
                 model=config["model"],
                 tools=tools,
                 tool_choice=tool_choice,
-                previous_response_id=previous_response_id
+                previous_response_id=previous_response_id,
+                effort=config.get("effort"),
+                verbosity=config.get("verbosity")
             )
         else:
             # Traditional models use temperature and top_p
@@ -510,7 +512,7 @@ def generate_response(api_key: str, prompt: str, response_format: Dict[str, Any]
 
 def display_response(response, error: Optional[str] = None):
     """Display the generated response or error."""
-    st.header("�� Generated Response")
+    st.header("Generated Response")
     
     if error:
         st.error(error)

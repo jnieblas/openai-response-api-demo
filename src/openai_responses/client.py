@@ -134,9 +134,11 @@ class OpenAIResponsesAPI:
             if model == "gpt-5":
                 # GPT-5 uses effort and verbosity instead of temperature/top_p
                 if effort:
-                    request_data["effort"] = effort
+                    request_data["reasoning"] = {
+                        "effort": effort
+                    }
                 if verbosity:
-                    request_data["verbosity"] = verbosity
+                    request_data["text"]["verbosity"] = verbosity
             else:
                 # Traditional models use temperature and top_p
                 if temperature is not None:
@@ -158,7 +160,8 @@ class OpenAIResponsesAPI:
             
             # Remove None values
             request_data = {k: v for k, v in request_data.items() if v is not None}
-            
+            print(request_data)
+
             # Make API request
             response = self._make_request(request_data)
             
